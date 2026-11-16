@@ -1,32 +1,39 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anlässe Übersicht - Stadtpolizei Chur</title>
-    <!-- Tailwind CSS for a clean, modern look -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800">
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-blue-500 selection:text-white">
 
     <div class="max-w-4xl mx-auto px-4 py-12">
-        <header class="mb-8 border-b pb-6">
-            <h1 class="text-3xl font-bold text-gray-900">Stadtpolizei Chur</h1>
-            <p class="text-lg text-gray-600 mt-1">Anlässe Übersicht</p>
+        <header class="mb-10 border-b border-slate-800 pb-6 flex items-center justify-between">
+            <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-800/50">Stadtpolizei Chur</span>
+                <h1 class="text-3xl font-extrabold text-white mt-2 tracking-tight">Anlässe Übersicht</h1>
+            </div>
         </header>
 
         <main>
             <!-- Loading State -->
-            <div id="loading" class="text-center py-12 text-gray-500">
-                <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div id="loading" class="text-center py-16 text-slate-400">
+                <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                >
+                </svg>
                 Lade Anlässe...
             </div>
 
             <!-- Error State -->
-            <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6"></div>
+            <div id="error" class="hidden bg-red-950/50 border border-red-800/60 text-red-300 px-4 py-3 rounded-xl mb-6 text-sm"></div>
 
             <!-- Event List -->
             <ul id="event-list" class="grid gap-4 md:grid-cols-2"></ul>
@@ -55,45 +62,45 @@
                 const items = await response.json();
 
                 // Filter for directories (folders) and check each for an index.html
-                // (Excluding hidden folders starting with '.')
                 const folders = items.filter(item => item.type === "dir" && !item.name.startsWith('.'));
 
                 let subIndexesFound = [];
 
                 for (const folder of folders) {
                     try {
-                        // Check if an index.html exists inside this subfolder
                         const subResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${folder.name}/index.html?ref=${branch}`);
                         if (subResponse.ok) {
                             subIndexesFound.push(folder.name);
                         }
                     } catch (e) {
-                        // Ignore folders that don't have an index.html
+                        // Ignore folders without index.html
                     }
                 }
 
                 loadingEl.style.display = "none";
 
                 if (subIndexesFound.length === 0) {
-                    listEl.innerHTML = `<li class="col-span-2 text-center text-gray-500 py-8">Keine Anlässe mit einer index.html gefunden.</li>`;
+                    listEl.innerHTML = `<li class="col-span-2 text-center text-slate-500 py-12 bg-slate-900/30 rounded-2xl border border-slate-900">Keine Anlässe mit einer index.html gefunden.</li>`;
                     return;
                 }
 
-                // Sort folders alphabetically or reverse-alphabetically (newest first if named by date/name)
+                // Sort folders alphabetically or reverse-alphabetically (newest first)
                 subIndexesFound.sort().reverse();
 
-                // Render links
+                // Render cards
                 subIndexesFound.forEach(folderName => {
-                    // Format the display name (e.g., replace dashes/underscores with spaces, capitalize)
                     const displayName = folderName.replace(/[-_]/g, ' ');
 
                     const li = document.createElement("li");
                     li.innerHTML = `
-                        <a href="./${encodeURIComponent(folderName)}/" class="block p-5 bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 hover:border-blue-200 group">
-                            <h2 class="text-xl font-semibold text-gray-800 group-hover:text-blue-600 capitalize transition">
-                                ${escapeHtml(displayName)}
-                            </h2>
-                            <p class="text-sm text-gray-400 mt-1">Ordner: ${escapeHtml(folderName)} &rarr;</p>
+                        <a href="./${encodeURIComponent(folderName)}/" class="block p-5 bg-slate-900/80 hover:bg-slate-900 rounded-xl shadow-lg shadow-black/20 hover:shadow-blue-500/5 transition-all border border-slate-800/80 hover:border-blue-500/50 group">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-semibold text-slate-100 group-hover:text-blue-400 capitalize transition-colors">
+                                    ${escapeHtml(displayName)}
+                                </h2>
+                                <span class="text-slate-600 group-hover:text-blue-400 transition-transform group-hover:translate-x-1">&rarr;</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2 font-mono">Ordner: ${escapeHtml(folderName)}</p>
                         </a>
                     `;
                     listEl.appendChild(li);
