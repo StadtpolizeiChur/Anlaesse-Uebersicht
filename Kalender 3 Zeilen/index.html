@@ -41,7 +41,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             flex-shrink: 0;
         }
 
@@ -52,7 +52,7 @@
         }
 
         .logo-container img {
-            height: 44px;
+            height: 48px;
             object-fit: contain;
         }
 
@@ -61,7 +61,7 @@
         }
 
         .datetime-display .date-str {
-            font-size: 0.9rem;
+            font-size: 1.05rem;
             color: var(--text-muted);
             font-weight: 500;
             text-transform: uppercase;
@@ -69,7 +69,7 @@
         }
 
         .datetime-display .time-str {
-            font-size: 1.85rem;
+            font-size: 2.15rem;
             font-weight: 700;
             letter-spacing: -0.02em;
             color: var(--text-main);
@@ -107,14 +107,14 @@
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             padding-bottom: 4px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             flex-shrink: 0;
         }
 
         .day-name {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-muted);
             text-transform: uppercase;
@@ -126,7 +126,7 @@
         }
 
         .day-date {
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--text-main);
         }
@@ -135,7 +135,7 @@
         .events-list {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 7px;
             overflow-y: auto;
             flex-grow: 1;
             padding-right: 2px;
@@ -154,10 +154,10 @@
             background: rgba(255, 255, 255, 0.05);
             border-left: 3px solid var(--accent-blue);
             border-radius: 6px;
-            padding: 6px 8px;
+            padding: 7px 9px;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 3px;
         }
 
         .event-pill:nth-child(3n+1) { border-left-color: var(--accent-blue); }
@@ -165,25 +165,33 @@
         .event-pill:nth-child(3n) { border-left-color: var(--accent-orange); }
 
         .event-title {
-            font-size: 0.78rem;
+            font-size: 0.9rem;
             font-weight: 600;
+            line-height: 1.25;
             color: var(--text-main);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .event-details {
-            font-size: 0.68rem;
+            font-size: 0.78rem;
+            line-height: 1.25;
             color: var(--text-muted);
             display: flex;
             flex-direction: column;
-            gap: 1px;
+            gap: 2px;
+        }
+
+        .event-details span {
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .no-events {
             color: rgba(255, 255, 255, 0.25);
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             font-style: italic;
             margin: auto;
             text-align: center;
@@ -239,7 +247,7 @@
 
         // Robust CSV Parser handling quoted fields with commas/newlines
         function parseCSV(text) {
-            let p = '', row = [''], ret = [row], s = !0;
+            let p = '', row = [''], ret = [row], s = true;
             for (let c of text) {
                 if (c === '"') {
                     if (s && c === p) row[row.length - 1] += c;
@@ -348,7 +356,7 @@
                         const pill = document.createElement('div');
                         pill.className = 'event-pill';
                         pill.innerHTML = `
-                            <div class="event-title" title="${ev.eventName}">${ev.eventName}</div>
+                            <div class="event-title">${ev.eventName}</div>
                             <div class="event-details">
                                 ${ev.timeString ? `<span>🕒 ${ev.timeString}</span>` : ''}
                                 ${ev.location ? `<span>📍 ${ev.location}</span>` : ''}
