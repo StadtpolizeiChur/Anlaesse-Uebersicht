@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stadt Chur Polizei - Einsatz-Signage</title>
+    <style>
+        :root {
+            --bg-color: #0c0e12;
+            --card-bg: rgba(22, 27, 34, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --today-bg: rgba(28, 36, 48, 0.9);
+            --today-border: rgba(59, 130, 246, 0.6);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+        }
+
+        /* Header Layout */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-container img {
+            height: 52px;
+            object-fit: contain;
+        }
+
+        .datetime-display {
+            text-align: right;
+        }
+
+        .datetime-display .date-str {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .datetime-display .time-str {
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        /* 2x7 Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 16px;
+            flex-grow: 1;
+            min-height: 0;
+        }
+
+        .day-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .day-card.today {
+            background-color: var(--today-bg);
+            border: 2px solid var(--today-border);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            flex-shrink: 0;
+        }
+
+        .day-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .day-card.today .day-name {
+            color: var(--accent-blue);
+        }
+
+        .day-date {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Events Container */
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-right: 2px;
+        }
+
+        .events-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .events-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .event-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 8px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .event-pill:nth-child(3n+1) { border-left-color: var(--accent-blue); }
+        .event-pill:nth-child(3n+2) { border-left-color: var(--accent-green); }
+        .event-pill:nth-child(3n) { border-left-color: var(--accent-orange); }
+
+        .event-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .event-details {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .no-events {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.75rem;
+            font-style: italic;
+            margin: auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <img src="logo.png" alt="Stadt Chur Polizei Logo">
+        </div>
+        <div class="datetime-display">
+            <div class="date-str" id="header-date">Datum wird geladen...</div>
+            <div class="time-str" id="header-time">00:00</div>
+        </div>
+    </header>
+
+    <div class="calendar-grid" id="calendar-grid">
+        <!-- Dynamically generated via JavaScript -->
+    </div>
+
+    <script>
+        // CONFIGURATION: Google Sheets Published CSV Link
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ--Ad6bot2cV0r_jpQlJeLFk2Sf5M7-FiP6mE0SWzWz3n4NaUYTl_1_MMzzuvrfOY-ZPqlTI2ygUSi/pub?gid=0&single=true&output=csv';
+
+        // Auto-refresh sheet data every 15 minutes
+        const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+
+        let cachedEvents = [];
+
+        // Clock & Date updater (in German)
+        function updateClock() {
+            const now = new Date();
+            const optionsDate = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('header-date').innerText = now.toLocaleDateString('de-DE', optionsDate);
+            document.getElementById('header-time').innerText = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Midnight page reload scheduler
+        function scheduleMidnightReload() {
+            const now = new Date();
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+            const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+            setTimeout(() => {
+                window.location.reload();
+            }, timeUntilMidnight);
+        }
+        scheduleMidnightReload();
+
+        // Robust CSV Parser handling quoted fields with commas/newlines
+        function parseCSV(text) {
+            let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0;
+            for (let c of text) {
+                if (c === '"') {
+                    if (s && c === p) row[row.length - 1] += c;
+                    s = !s;
+                } else if (c === ',' && s) {
+                    row.push(p = '');
+                } else if ((c === '\r' || c === '\n') && s) {
+                    if (c === '\n' && p === '\r' && row.length === 1 && row[0] === '') {
+                        // handle empty lines
+                    } else {
+                        row = [p = ''];
+                        ret.push(row);
+                    }
+                } else {
+                    row[row.length - 1] += c;
+                }
+                p = c;
+            }
+            return ret.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''));
+        }
+
+        // Fetch and parse Google Sheet CSV
+        async function fetchEvents() {
+            try {
+                const response = await fetch(CSV_URL + '&_=' + new Date().getTime()); // Prevent caching
+                const data = await response.text();
+                const rows = parseCSV(data);
+                
+                if (rows.length < 2) return [];
+
+                const headers = rows[0].map(h => h.trim());
+                const idxStart = headers.indexOf('StartDate');
+                const idxEnd = headers.indexOf('EndDate');
+                const idxTime = headers.indexOf('TimeString');
+                const idxName = headers.indexOf('EventName');
+                const idxLoc = headers.indexOf('Location');
+
+                let events = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (r.length >= headers.length) {
+                        events.push({
+                            startDate: r[idxStart]?.trim(),
+                            endDate: r[idxEnd]?.trim() || r[idxStart]?.trim(),
+                            timeString: r[idxTime]?.trim(),
+                            eventName: r[idxName]?.trim(),
+                            location: r[idxLoc]?.trim()
+                        });
+                    }
+                }
+                return events;
+            } catch (err) {
+                console.error('Fehler beim Abrufen der Kalenderdaten:', err);
+                return [];
+            }
+        }
+
+        // Normalize date to YYYY-MM-DD string in local time
+        function formatDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Build 14-Day Rolling Grid
+        async function renderCalendar() {
+            cachedEvents = await fetchEvents();
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let i = 0; i < 14; i++) {
+                const currentDay = new Date(today);
+                currentDay.setDate(today.getDate() + i);
+                const dateKey = formatDateKey(currentDay);
+
+                const card = document.createElement('div');
+                card.className = `day-card ${i === 0 ? 'today' : ''}`;
+
+                const weekdayName = currentDay.toLocaleDateString('de-DE', { weekday: 'short' });
+                const dateFormatted = currentDay.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' });
+
+                card.innerHTML = `
+                    <div class="day-header">
+                        <span class="day-name">${i === 0 ? 'HEUTE' : weekdayName}</span>
+                        <span class="day-date">${dateFormatted}</span>
+                    </div>
+                    <div class="events-list" id="events-${dateKey}"></div>
+                `;
+
+                grid.appendChild(card);
+
+                // Populate events matching this date
+                const dayEventsList = card.querySelector(`#events-${dateKey}`);
+                const matchingEvents = cachedEvents.filter(ev => {
+                    return ev.startDate <= dateKey && ev.endDate >= dateKey;
+                });
+
+                if (matchingEvents.length === 0) {
+                    dayEventsList.innerHTML = `<div class="no-events">Keine Termine</div>`;
+                } else {
+                    matchingEvents.forEach(ev => {
+                        const pill = document.createElement('div');
+                        pill.className = 'event-pill';
+                        pill.innerHTML = `
+                            <div class="event-title" title="${ev.eventName}">${ev.eventName}</div>
+                            <div class="event-details">
+                                ${ev.timeString ? `<span>🕒 ${ev.timeString}</span>` : ''}
+                                ${ev.location ? `<span>📍 ${ev.location}</span>` : ''}
+                            </div>
+                        `;
+                        dayEventsList.appendChild(pill);
+                    });
+                }
+            }
+        }
+
+        // Initial load & scheduled background refresh every 15 minutes
+        renderCalendar();
+        setInterval(renderCalendar, REFRESH_INTERVAL_MS);
+    </script>
+</body>
+</html>
