@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veranstaltungsanzeige</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d1117;
+            color: #ffffff;
+            padding: 25px 40px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #30363d;
+            padding-bottom: 12px;
+            flex-shrink: 0;
+        }
+        .logo {
+            height: 120px;
+            width: auto;
+            object-fit: contain;
+        }
+        h1 {
+            font-size: 36px;
+            color: #58a6ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+        .table-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            table-layout: auto; /* Lets columns naturally adapt to their content */
+        }
+        tr {
+            border-bottom: 1px solid #30363d;
+        }
+        th, td {
+            padding: 0 24px; /* Generous horizontal padding */
+            text-align: left;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #161b22;
+            color: #8b949e;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 22px;
+            letter-spacing: 1px;
+            height: 55px;
+        }
+        td {
+            font-size: 32px; 
+            white-space: nowrap; /* Keeps Datum, Zeit, and Veranstaltung on a clean single line */
+        }
+        /* The last column (Ort) can expand and wrap if needed */
+        td.col-expand {
+            white-space: normal;
+        }
+        tr:nth-child(even) {
+            background-color: rgba(22, 27, 34, 0.4);
+        }
+        .ongoing-row {
+            background-color: rgba(31, 111, 235, 0.15) !important;
+            border-left: 6px solid #1f6feb;
+        }
+        .no-events {
+            text-align: center;
+            font-size: 32px;
+            color: #8b949e;
+            white-space: normal !important;
+        }
+        .footer-status {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #8b949e;
+            text-align: right;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <img src="logo.png" alt="Stadt Chur Polizei Logo" class="logo">
+        <h1>Kommende Veranstaltungen</h1>
+    </div>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Datum</th>
+                    <th>Zeit</th>
+                    <th>Veranstaltung</th>
+                    <th>Ort</th>
+                </tr>
+            </thead>
+            <tbody id="event-table-body">
+                <tr><td colspan="4" class="no-events">Veranstaltungen werden geladen...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer-status" id="last-updated">Automatische Live-Anzeige</div>
+
+    <script>
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ--Ad6bot2cV0r_jpQlJeLFk2Sf5M7-FiP6mE0SWzWz3n4NaUYTl_1_MMzzuvrfOY-ZPqlTI2ygUSi/pub?gid=0&single=true&output=csv';
+
+        function formatDateGerman(dateStr) {
+            if (!dateStr) return '';
+            const cleaned = dateStr.trim();
+            const parts = cleaned.split('-');
+            if (parts.length === 3) {
+                return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
+            }
+            return cleaned;
+        }
+
+        function parseLocalDate(dateStr) {
+            if (!dateStr) return null;
+            const cleaned = dateStr.trim();
+            const parts = cleaned.split('-');
+            if (parts.length === 3) {
+                return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 0, 0, 0, 0);
+            }
+            const d = new Date(cleaned);
+            if (isNaN(d.getTime())) return null;
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function parseCSVLine(text) {
+            let result = [];
+            let flag = false;
+            let current = '';
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"') {
+                    flag = !flag;
+                } else if (char === ',' && !flag) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            return result.map(item => item.replace(/^"|"$/g, '').trim());
+        }
+
+        async function fetchAndRenderEvents() {
+            try {
+                const separator = CSV_URL.includes('?') ? '&' : '?';
+                const response = await fetch(CSV_URL + separator + 'cacheBust=' + new Date().getTime());
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const csvData = await response.text();
+
+                if (csvData.trim().toLowerCase().startsWith('<!doctype') || csvData.includes('<html')) {
+                    document.getElementById('event-table-body').innerHTML = `
+                        <tr><td colspan="4" class="no-events" style="color:#f85149; font-size:24px;">
+                            Fehler: Der Link liefert eine HTML-Webseite statt einer CSV-Datei.<br>
+                            <span style="font-size:18px; color:#8b949e;">Bitte in Google Tabellen auf "Datei -> Freigabe -> Im Web veröffentlichen -> Komma-getrennte Werte (.csv)" stellen.</span>
+                        </td></tr>`;
+                    return;
+                }
+
+                let cleanText = csvData.replace(/^\uFEFF/, '');
+                let lines = cleanText.split(/\r?\n/).filter(line => line.trim() !== '');
+                
+                if (lines.length <= 1) {
+                    document.getElementById('event-table-body').innerHTML = `<tr><td colspan="4" class="no-events">Keine Zeilen im Google Sheet gefunden.</td></tr>`;
+                    return;
+                }
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let processedEvents = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    let cols = parseCSVLine(lines[i]);
+                    if (cols.length < 4) continue;
+
+                    let startStr = cols[0] || '';
+                    let endStr = cols[1] || startStr;
+                    let timeStr = cols[2] || '';
+                    let nameStr = cols[3] || '';
+                    let locStr = cols[4] || '';
+
+                    let startDate = parseLocalDate(startStr);
+                    let endDate = parseLocalDate(endStr);
+                    if (!endDate && startDate) endDate = startDate;
+
+                    let isOngoing = false;
+                    if (startDate && endDate) {
+                        isOngoing = (startDate <= today && endDate >= today);
+                    }
+
+                    let formattedStart = formatDateGerman(startStr);
+                    let formattedEnd = formatDateGerman(endStr);
+
+                    let dateDisplay = (!endStr || startStr === endStr)
+                        ? formattedStart
+                        : `${formattedStart} – ${formattedEnd}`;
+
+                    processedEvents.push({
+                        startDateObj: startDate,
+                        endDateObj: endDate,
+                        dateString: dateDisplay || startStr,
+                        timeString: timeStr,
+                        name: nameStr,
+                        location: locStr,
+                        isOngoing
+                    });
+                }
+
+                let activeOrFuture = processedEvents.filter(ev => {
+                    if (!ev.endDateObj) return true;
+                    return ev.endDateObj >= today;
+                });
+
+                activeOrFuture.sort((a, b) => {
+                    if (a.isOngoing && !b.isOngoing) return -1;
+                    if (!a.isOngoing && b.isOngoing) return 1;
+
+                    if (a.startDateObj && b.startDateObj && a.startDateObj.getTime() !== b.startDateObj.getTime()) {
+                        return a.startDateObj - b.startDateObj;
+                    }
+
+                    return a.timeString.localeCompare(b.timeString, 'de', { numeric: true });
+                });
+
+                let top6Rows = activeOrFuture.slice(0, 6);
+                let tbody = document.getElementById('event-table-body');
+                
+                if (top6Rows.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="no-events" style="height:100%;">Keine bevorstehenden Veranstaltungen geplant.</td></tr>`;
+                    return;
+                }
+
+                // Dynamically distribute row heights evenly to fill the screen vertically
+                let rowHeightPercent = (100 / 6).toFixed(2);
+
+                let html = '';
+                top6Rows.forEach(ev => {
+                    let rowClass = ev.isOngoing ? 'class="ongoing-row"' : '';
+                    
+                    html += `
+                        <tr ${rowClass} style="height: ${rowHeightPercent}%;">
+                            <td>${ev.dateString}</td>
+                            <td>${ev.timeString}</td>
+                            <td>${ev.name}</td>
+                            <td class="col-expand">${ev.location}</td>
+                        </tr>
+                    `;
+                });
+
+                tbody.innerHTML = html;
+                document.getElementById('last-updated').innerText = `Zuletzt aktualisiert: ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+
+            } catch (error) {
+                console.error('Fehler beim Laden:', error);
+                document.getElementById('event-table-body').innerHTML = `<tr><td colspan="4" class="no-events" style="color:#f85149;">Fehler beim Laden der CSV-Daten.</td></tr>`;
+            }
+        }
+
+        fetchAndRenderEvents();
+        setInterval(fetchAndRenderEvents, 15 * 60 * 1000);
+
+        function scheduleMidnightRefresh() {
+            const now = new Date();
+            const night = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            setTimeout(() => {
+                fetchAndRenderEvents();
+                scheduleMidnightRefresh();
+            }, night.getTime() - now.getTime());
+        }
+        scheduleMidnightRefresh();
+    </script>
+</body>
+</html>
