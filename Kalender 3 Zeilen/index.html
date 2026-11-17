@@ -269,6 +269,16 @@
             return ret.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''));
         }
 
+        // Helper to extract start and end time strings for sorting (expects formats like "HH:MM - HH:MM" or "HH:MM")
+        function parseTimeBounds(timeString) {
+            if (!timeString) return { start: '99:99', end: '99:99' };
+            const cleaned = timeString.replace(/[^\d:-]/g, '').trim();
+            const parts = cleaned.split(/[-–—]/);
+            const start = parts[0] ? parts[0].trim() : '99:99';
+            const end = parts[1] ? parts[1].trim() : start;
+            return { start, end };
+        }
+
         // Fetch and parse Google Sheet CSV
         async function fetchEvents() {
             try {
@@ -289,10 +299,14 @@
                 for (let i = 1; i < rows.length; i++) {
                     const r = rows[i];
                     if (r.length >= headers.length) {
+                        const timeStr = r[idxTime]?.trim() || '';
+                        const bounds = parseTimeBounds(timeStr);
                         events.push({
                             startDate: r[idxStart]?.trim(),
                             endDate: r[idxEnd]?.trim() || r[idxStart]?.trim(),
-                            timeString: r[idxTime]?.trim(),
+                            timeString: timeStr,
+                            startTime: bounds.start,
+                            endTime: bounds.end,
                             eventName: r[idxName]?.trim(),
                             location: r[idxLoc]?.trim()
                         });
@@ -313,7 +327,7 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Build 21-Day Rolling Grid (3 rows x 7 columns)
+        // Build 21-Day Rolling Grid (3 rows x 7 columns) with Chronological Sorting
         async function renderCalendar() {
             cachedEvents = await fetchEvents();
             const grid = document.getElementById('calendar-grid');
@@ -343,10 +357,18 @@
 
                 grid.appendChild(card);
 
-                // Populate events matching this date
+                // Populate and sort events matching this date
                 const dayEventsList = card.querySelector(`#events-${dateKey}`);
                 const matchingEvents = cachedEvents.filter(ev => {
                     return ev.startDate <= dateKey && ev.endDate >= dateKey;
+                });
+
+                // Sort chronologically: by start time first, then by end time (sooner ending first)
+                matchingEvents.sort((a, b) => {
+                    if (a.startTime !== b.startTime) {
+                        return a.startTime.localeCompare(b.startTime);
+                    }
+                    return a.endTime.localeCompare(b.endTime);
                 });
 
                 if (matchingEvents.length === 0) {
