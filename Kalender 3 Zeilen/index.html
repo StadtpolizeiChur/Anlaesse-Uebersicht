@@ -6,16 +6,18 @@
     <title>Stadt Chur Polizei - Einsatz-Signage</title>
     <style>
         :root {
-            --bg-color: #0c0e12;
-            --card-bg: rgba(22, 27, 34, 0.75);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --today-bg: rgba(28, 36, 48, 0.9);
-            --today-border: rgba(59, 130, 246, 0.6);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --accent-blue: #3b82f6;
-            --accent-green: #10b981;
-            --accent-orange: #f59e0b;
+            --basis: #23334b;
+            --bg-color: color-mix(in srgb, var(--basis), black 90%);
+            --card-bg: color-mix(in srgb, var(--basis), black 60%);
+            --card-border: color-mix(in srgb, var(--basis), black 30%);
+            --today-bg: color-mix(in srgb, var(--basis), black 30%);
+            --today-border: var(--accent-blue);
+            --text-main: white;
+            --text-muted: #d0d4d8;
+            --accent-red: #E40134;
+            --accent-blue: #5faec7;
+            --accent-green: #607a5b;
+            --accent-orange: #e3a75f;
         }
 
         * {
@@ -152,7 +154,7 @@
 
         .event-pill {
             background: rgba(255, 255, 255, 0.05);
-            border-left: 3px solid var(--accent-blue);
+            border-left: 3px solid var(--accent-red);
             border-radius: 6px;
             padding: 7px 9px;
             display: flex;
@@ -160,9 +162,9 @@
             gap: 3px;
         }
 
-        .event-pill:nth-child(3n+1) { border-left-color: var(--accent-blue); }
-        .event-pill:nth-child(3n+2) { border-left-color: var(--accent-green); }
-        .event-pill:nth-child(3n) { border-left-color: var(--accent-orange); }
+        .event-pill:nth-child(3n+1) { border-left-color: var(--accent-red); }
+        .event-pill:nth-child(3n+2) { border-left-color: var(--accent-red); }
+        .event-pill:nth-child(3n) { border-left-color: var(--accent-red); }
 
         .event-title {
             font-size: 0.9rem;
